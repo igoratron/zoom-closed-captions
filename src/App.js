@@ -51,6 +51,7 @@ function Loading() {
 function App() {
   const [messages, setMessages] = useState([]);
   const [phrase, setPhrase] = useState(0);
+  const focusRef = useRef(null);
 
   useEffect(() => {
     setTimeout(() => {
@@ -64,6 +65,10 @@ function App() {
       });
       setMessages(messages);
       setPhrase((phrase + 1) % mock.length);
+
+      if (messages.length) {
+        focusRef.current.scrollIntoView({ behaviour: "smooth" });
+      }
     }, (phrase + 1) * 5000);
   });
 
@@ -72,11 +77,14 @@ function App() {
   }
 
   return (
-    <ol className="subtitles">
-      {messages.map((m, index) => (
-        <Phrase text={m.text} isProcessing={m.isProcessing} key={index} />
-      ))}
-    </ol>
+    <>
+      <ol className="subtitles">
+        {messages.map((m, index) => (
+          <Phrase text={m.text} isProcessing={m.isProcessing} key={index} />
+        ))}
+      </ol>
+      <div ref={focusRef} />
+    </>
   );
 }
 

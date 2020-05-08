@@ -22,9 +22,18 @@ const initialState = {
 const reducer = (state, action) => {
   switch (action.type) {
     case "PHRASE_ADDED":
+      const subs = state.subtitles.slice(-100);
+      const lastPhraseId = subs.length > 0 ? subs[subs.length - 1].id : null;
+
+      if(lastPhraseId === action.payload.id) {
+        subs[subs.length - 1] = action.payload;
+      } else {
+        subs.push(action.payload)
+      }
+
       return {
         ...state,
-        subtitles: state.subtitles.concat([action.payload]).slice(-100)
+        subtitles: subs
       };
     case "CONNECTION_STATE_CHANGED":
       return {

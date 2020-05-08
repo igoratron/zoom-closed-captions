@@ -67,18 +67,16 @@ function App() {
     }, (phrase + 1) * 5000);
   });
 
+  if (messages.length === 0) {
+    return <Loading />;
+  }
+
   return (
-    <div className="window">
-      {messages.length === 0 ? (
-        <Loading />
-      ) : (
-        <ol className="subtitles">
-          {messages.map((m, index) => (
-            <Phrase text={m.text} isProcessing={m.isProcessing} key={index} />
-          ))}
-        </ol>
-      )}
-    </div>
+    <ol className="subtitles">
+      {messages.map((m, index) => (
+        <Phrase text={m.text} isProcessing={m.isProcessing} key={index} />
+      ))}
+    </ol>
   );
 }
 

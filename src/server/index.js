@@ -4,6 +4,7 @@ const wrtc = require("wrtc");
 const uuidv1 = require('uuid/v1');
 
 const audioListener = require('./audioListener');
+const { SOCKET_URL, ICE_SERVERS } = require('../config');
 
 // Node doesn't support WebRTC, so we need to polyfill it to get RTCMultiConnection to work
 Object.assign(global, wrtc);
@@ -12,16 +13,11 @@ Object.assign(global, wrtc);
 global.io = io;
 
 const connection = new RTCMultiConnection();
-connection.socketURL = "https://rtcmulticonnection.herokuapp.com:443/";
-// connection.socketURL = 'http://3.10.215.245:9000/';
+connection.socketURL = SOCKET_URL;
+connection.iceServers = ICE_SERVERS;
 connection.session = {
   data: true
 };
-// connection.iceServers = [{
-//   urls: 'turn:3.10.215.245:34534',
-//   credential: 'test',
-//   username: 'test',
-// }];
 connection.openOrJoin("zoom-closed-captions");
 
 let currentId = uuidv1();

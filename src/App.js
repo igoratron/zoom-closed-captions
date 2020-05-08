@@ -6,13 +6,9 @@ import "./App.css";
 
 import Phrase from "./Phrase";
 import Loading from "./Loading";
+const { SOCKET_URL, ICE_SERVERS, CONNECTION_STATE } = require('./config');
 
 window.io = io;
-
-const CONNECTION_STATE = {
-  CONNECTING: Symbol("connecting"),
-  CONNECTED: Symbol("connected")
-};
 
 const initialState = {
   subtitles: [],
@@ -48,21 +44,12 @@ const reducer = (state, action) => {
 
 function connectToWebRTC(dispatch) {
   const connection = new RTCMultiConnection();
-
-  connection.socketURL = "https://rtcmulticonnection.herokuapp.com:443/";
-  // connection.socketURL = 'http://3.10.215.245:9000/';
+  connection.socketURL = SOCKET_URL;
+  connection.iceServers = ICE_SERVERS;
 
   connection.session = {
     data: true
   };
-
-  // Set up a TURN server if some users are having issues connecting to each other
-  // For hackday, we used https://github.com/coturn/coturn
-  // connection.iceServers = [{
-  //   urls: 'turn:3.10.215.245:34534',
-  //   credential: 'test',
-  //   username: 'test',
-  // }];
 
   // Changing the roomId means you will only connect to other users using the same roomId
   connection.openOrJoin("zoom-closed-captions", () => {

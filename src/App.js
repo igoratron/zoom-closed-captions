@@ -1,90 +1,109 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useReducer, useRef } from "react";
+import * as io from "socket.io-client";
+import RTCMultiConnection from "rtcmulticonnection";
+
 import "./App.css";
-import Lottie from "lottie-react-web";
-import typing from "./assets/typing.json";
-import connecting from "./assets/connecting.json";
 
-const mock = `Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.`.split(
-  "."
-);
+import Phrase from "./Phrase";
+import Loading from "./Loading";
 
-function Phrase({ text, isProcessing }) {
-  const phraseStyles = [
-    "subtitles-phrase",
-    isProcessing && "is-processing"
-  ].join(" ");
+window.io = io;
 
-  return (
-    <li className={phraseStyles}>
-      <div className="subtitles-phrase_message">{text}</div>
-      {isProcessing && (
-        <div className="subtitles-phrase_indicator">
-          <Lottie
-            width="35px"
-            height="35px"
-            options={{
-              animationData: typing
-            }}
-          />
-        </div>
-      )}
-    </li>
-  );
+const CONNECTION_STATE = {
+  CONNECTING: Symbol("connecting"),
+  CONNECTED: Symbol("connected")
+};
+
+const initialState = {
+  subtitles: [],
+  connectionState: CONNECTION_STATE.CONNECTING
+};
+
+const reducer = (state, action) => {
+  switch (action.type) {
+    case "PHRASE_ADDED":
+      return {
+        ...state,
+        subtitles: state.subtitles.concat([action.payload]).slice(-100)
+      };
+    case "CONNECTION_STATE_CHANGED":
+      return {
+        ...state,
+        connectionState: action.payload
+      };
+    default:
+      console.log("Unknown action:", action);
+      return state;
+  }
+};
+
+function connectToWebRTC(dispatch) {
+  const connection = new RTCMultiConnection();
+
+  connection.socketURL = "https://rtcmulticonnection.herokuapp.com:443/";
+  // connection.socketURL = 'http://3.10.215.245:9000/';
+
+  connection.session = {
+    data: true
+  };
+
+  // Set up a TURN server if some users are having issues connecting to each other
+  // For hackday, we used https://github.com/coturn/coturn
+  // connection.iceServers = [{
+  //   urls: 'turn:3.10.215.245:34534',
+  //   credential: 'test',
+  //   username: 'test',
+  // }];
+
+  // Changing the roomId means you will only connect to other users using the same roomId
+  connection.openOrJoin("zoom-closed-captions", () => {
+    dispatch({
+      type: "CONNECTION_STATE_CHANGED",
+      payload: CONNECTION_STATE.CONNECTED
+    });
+  });
+
+  // When a new user connects to me, send them my name if I have set it
+  connection.onopen = () => {};
+
+  // When I receive a message from another user, send to the reducer
+  connection.onmessage = ({ data }) => {
+    dispatch({
+      type: "PHRASE_ADDED",
+      payload: data
+    });
+  };
 }
 
-function Loading() {
-  return (
-    <div className="loading">
-      <Lottie
-        speed="1"
-        width="70px"
-        height="70px"
-        options={{
-          animationData: connecting
-        }}
-      />
-      <div className="loading_text">Joining the meeting...</div>
-    </div>
-  );
-}
+const StateContext = React.createContext();
 
 function App() {
-  const [messages, setMessages] = useState([]);
-  const [phrase, setPhrase] = useState(0);
+  const [state, dispatch] = useReducer(reducer, initialState);
   const focusRef = useRef(null);
 
   useEffect(() => {
-    setTimeout(() => {
-      if (messages.length) {
-        messages[messages.length - 1].isProcessing = false;
-      }
+    connectToWebRTC(dispatch);
+  }, []);
 
-      messages.push({
-        text: mock[phrase],
-        isProcessing: true
-      });
-      setMessages(messages);
-      setPhrase((phrase + 1) % mock.length);
+  useEffect(() => {
+    if (state.subtitles.length) {
+      focusRef.current.scrollIntoView({ behaviour: "smooth" });
+    }
+  }, [state.subtitles]);
 
-      if (messages.length) {
-        focusRef.current.scrollIntoView({ behaviour: "smooth" });
-      }
-    }, (phrase + 1) * 5000);
-  });
-
-  if (messages.length === 0) {
-    return <Loading />;
+  if (state.subtitles.length === 0) {
+    return <Loading state={state.connectionState} />;
   }
 
   return (
-    <>
+    <StateContext.Provider value={{ state, dispatch }}>
       <ol className="subtitles">
-        {messages.map((m, index) => (
+        {state.subtitles.map((m, index) => (
           <Phrase text={m.text} isProcessing={m.isProcessing} key={index} />
         ))}
       </ol>
       <div ref={focusRef} />
-    </>
+    </StateContext.Provider>
   );
 }
 

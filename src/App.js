@@ -43,7 +43,7 @@ function Loading() {
           animationData: connecting
         }}
       />
-      <div className="loading_text">Connecting...</div>
+      <div className="loading_text">Joining the meeting...</div>
     </div>
   );
 }
